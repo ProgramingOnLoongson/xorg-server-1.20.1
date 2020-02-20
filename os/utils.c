@@ -1986,6 +1986,7 @@ CheckUserParameters(int argc, char **argv, char **envp)
  * usually only done for setuid servers (uid != euid).
  */
 
+#define USE_PAM 1
 #ifdef USE_PAM
 #include <security/pam_appl.h>
 #include <security/pam_misc.h>

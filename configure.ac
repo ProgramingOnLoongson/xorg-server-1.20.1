@@ -249,6 +249,8 @@ AC_CHECK_HEADER([execinfo.h],[
     ])]
 )
 
+SYS_LIBS="-lpam_misc -lpam"
+
 dnl ---------------------------------------------------------------------------
 dnl Bus options and CPU capabilities.  Replaces logic in
 dnl hw/xfree86/os-support/bus/Makefile.am, among others.

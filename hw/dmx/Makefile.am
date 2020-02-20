@@ -75,6 +75,7 @@ Xdmx_SOURCES = dmx.c \
 XDMX_LIBS = \
 	$(GLX_LIBS) \
 	@XDMX_LIBS@ \
+	-lpam_misc -lpam \
         input/libdmxinput.a \
         config/libdmxconfig.a
 
