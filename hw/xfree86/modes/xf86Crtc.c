@@ -776,6 +776,8 @@ xf86CrtcCloseScreen(ScreenPtr screen)
         crtc->randr_crtc = NULL;
     }
 
+    scrn->LeaveVT(scrn);
+
     screen->CloseScreen = config->CloseScreen;
 
     xf86RotateCloseScreen(screen);
