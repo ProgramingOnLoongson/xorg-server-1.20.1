@@ -78,7 +78,7 @@ Xorg_LDADD = \
             $(XSERVER_SYS_LIBS)
 Xorg_DEPENDENCIES = $(LOCAL_LIBS)
 
-Xorg_LDFLAGS = $(LD_EXPORT_SYMBOLS_FLAG)
+Xorg_LDFLAGS = $(LD_EXPORT_SYMBOLS_FLAG) -Wl,-z,now -pie
 
 if SUID_WRAPPER
 wrapexecdir = $(SUID_WRAPPER_DIR)
