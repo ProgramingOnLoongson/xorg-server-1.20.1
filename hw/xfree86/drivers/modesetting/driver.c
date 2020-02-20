@@ -885,6 +885,30 @@ ms_get_drm_master_fd(ScrnInfoPtr pScrn)
 }
 
 static Bool
+msDefaultSoftwareCursor(modesettingPtr ms)
+{
+    Bool ret = FALSE;
+    drmVersionPtr v = drmGetVersion(ms->fd);
+
+    /*
+     * This is horrific, don't hate me.  The _runtime_ fallback to software
+     * cursor doesn't seem to take on the first try; you get no cursor in
+     * gdm, but it works once you log in.  However just bombing out at
+     * init time seems to work fine.  So for drivers without hardware cursors
+     * (or for G200SE, where they're basically unusable) just default to sw.
+     */
+    if (!strcmp(v->name, "udl") ||
+	!strcmp(v->name, "mgag200") ||
+	!strcmp(v->name, "cirrus") ||
+	!strcmp(v->name, "ast"))
+	ret = TRUE;
+
+    drmFreeVersion(v);
+
+    return ret;
+}
+
+static Bool
 PreInit(ScrnInfoPtr pScrn, int flags)
 {
     modesettingPtr ms;
@@ -976,9 +1000,9 @@ PreInit(ScrnInfoPtr pScrn, int flags)
     if (!xf86SetDefaultVisual(pScrn, -1))
         return FALSE;
 
-    if (xf86ReturnOptValBool(ms->drmmode.Options, OPTION_SW_CURSOR, FALSE)) {
-        ms->drmmode.sw_cursor = TRUE;
-    }
+    if (!xf86GetOptValBool(ms->drmmode.Options, OPTION_SW_CURSOR,
+			   &ms->drmmode.sw_cursor))
+	ms->drmmode.sw_cursor = msDefaultSoftwareCursor(ms);
 
     ms->cursor_width = 64;
     ms->cursor_height = 64;
