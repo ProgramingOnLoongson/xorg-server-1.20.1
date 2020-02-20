@@ -383,6 +383,9 @@ LoaderListDir(const char *subdir, const char **patternlist)
                 strcpy(fp, dp->d_name);
                 if (!(stat(buf, &stat_buf) == 0 && S_ISREG(stat_buf.st_mode)))
                     continue;
+                if (!strcmp(subdir, "drivers") &&
+                            (strstr(dp->d_name, "vesa") || strstr(dp->d_name, "fbdev")))
+                    continue;
                 for (p = patterns; p->pattern; p++) {
                     if (regexec(&p->rex, dp->d_name, 2, match, 0) == 0 &&
                         match[1].rm_so != -1) {
