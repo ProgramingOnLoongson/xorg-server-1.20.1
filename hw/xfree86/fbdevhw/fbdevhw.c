@@ -351,7 +351,7 @@ fbdevHWProbe(struct pci_device *pPci, char *device, char **namep)
 {
     int fd;
 
-    if (pPci)
+    if (pPci && !device)
         fd = fbdev_open_pci(pPci, namep);
     else
         fd = fbdev_open(-1, device, namep);
@@ -365,16 +365,28 @@ fbdevHWProbe(struct pci_device *pPci, char *device, char **namep)
 Bool
 fbdevHWInit(ScrnInfoPtr pScrn, struct pci_device *pPci, char *device)
 {
+    static Bool been_here;
     fbdevHWPtr fPtr;
 
     fbdevHWGetRec(pScrn);
     fPtr = FBDEVHWPTR(pScrn);
 
     /* open device */
-    if (pPci)
+    if (pPci && !device)
         fPtr->fd = fbdev_open_pci(pPci, NULL);
     else
-        fPtr->fd = fbdev_open(pScrn->scrnIndex, device, NULL);
+	fPtr->fd = fbdev_open(pScrn->scrnIndex, device, NULL);
+
+    if (pPci && fPtr->fd == -1) {
+	if (been_here != serverGeneration) {
+	    fPtr->fd = fbdev_open(pScrn->scrnIndex, device, NULL);
+	    been_here = serverGeneration;
+	} else {
+	    xf86DrvMsg(pScrn->scrnIndex, X_ERROR,
+		       "Please specify Option \"fbdev\" to use this device\n");
+	}
+    }
+
     if (-1 == fPtr->fd) {
         xf86DrvMsg(pScrn->scrnIndex, X_ERROR,
                    "Failed to open framebuffer device, consult warnings"

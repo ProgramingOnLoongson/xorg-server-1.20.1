@@ -536,21 +536,6 @@ xf86GetDevFromEntity(int entityIndex, int instance)
 void
 xf86PostProbe(void)
 {
-    if (fbSlotClaimed && (
-#if (defined(__sparc__) || defined(__sparc)) && !defined(__OpenBSD__)
-                             sbusSlotClaimed ||
-#endif
-#ifdef XSERVER_PLATFORM_BUS
-                             platformSlotClaimed ||
-#endif
-#ifdef XSERVER_LIBPCIACCESS
-                             pciSlotClaimed
-#else
-                             TRUE
-#endif
-        ))
-        FatalError("Cannot run in framebuffer mode. Please specify busIDs "
-                   "       for all framebuffer devices\n");
 }
 
 int
