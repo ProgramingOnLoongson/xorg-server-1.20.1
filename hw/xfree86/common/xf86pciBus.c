@@ -37,6 +37,7 @@
 #include <unistd.h>
 #include <X11/X.h>
 #include <pciaccess.h>
+#include <xf86drm.h>
 #include "os.h"
 #include "Pci.h"
 #include "xf86.h"
@@ -1147,8 +1148,29 @@ xf86VideoPtrToDriverList(struct pci_device *dev, XF86MatchedDrivers *md)
         break;
     case 0x10de:
     case 0x12d2:
+    {
+        char busid[32];
+        int fd;
+
+        snprintf(busid, sizeof(busid), "pci:%04x:%02x:%02x.%d",
+                 dev->domain, dev->bus, dev->dev, dev->func);
+
+	/* 'modesetting' is preferred for GeForce 8 and newer GPUs */
+        fd = drmOpenWithType("nouveau", busid, DRM_NODE_RENDER);
+        if (fd >= 0) {
+            uint64_t args[] = { 11 /* NOUVEAU_GETPARAM_CHIPSET_ID */, 0 };
+            int ret = drmCommandWriteRead(fd, 0 /* DRM_NOUVEAU_GETPARAM */,
+                                          &args, sizeof(args));
+            drmClose(fd);
+            if (ret == 0) {
+                if (args[1] == 0x050 || args[1] >= 0x80)
+                    break;
+            }
+        }
+
         driverList[0] = "nouveau";
         break;
+    }
     case 0x1106:
         driverList[0] = "openchrome";
         break;
