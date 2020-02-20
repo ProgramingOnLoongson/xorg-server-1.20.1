@@ -564,6 +564,16 @@ miComputeEllipseSpans(int lw, xArc * parc, miArcSpanData * spdata)
                     outx = x + t;
             }
         }
+        if (ICEIL(xorg + outx) - ICEIL(xorg + inx) < lw ) {
+            if (inx <= 0.0) {
+                outx = outx + ICEIL(-r);
+                inx = inx + ICEIL(r);
+	    }
+	    else {
+                outx = outx + ICEIL(r);
+                inx = inx + ICEIL(-r);
+	    }
+        }
         span->lx = ICEIL(xorg - outx);
         if (inx <= 0.0) {
             spdata->count1++;
