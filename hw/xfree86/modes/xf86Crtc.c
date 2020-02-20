@@ -2159,6 +2159,31 @@ numEnabledOutputs(xf86CrtcConfigPtr config, Bool *enabled)
     return i;
 }
 
+static DisplayModePtr
+findReasonableMode(xf86CrtcConfigPtr config, xf86OutputPtr output, Bool *enabled, int width, int height)
+{
+    DisplayModePtr mode =
+        xf86OutputHasPreferredMode(output, width, height);
+
+    /* if there's no preferred mode, just try to find a reasonable one */
+    if (!mode) {
+        float aspect = 0.0;
+        DisplayModePtr a = NULL, b = NULL;
+
+        if (output->mm_height)
+            aspect = (float) output->mm_width /
+                (float) output->mm_height;
+
+        a = bestModeForAspect(config, enabled, 4.0/3.0);
+        if (aspect)
+            b = bestModeForAspect(config, enabled, aspect);
+
+        mode = biggestMode(a, b);
+    }
+
+    return mode;
+}
+
 static Bool
 xf86TargetRightOf(ScrnInfoPtr scrn, xf86CrtcConfigPtr config,
                   DisplayModePtr *modes, Bool *enabled,
@@ -2179,7 +2204,7 @@ xf86TargetRightOf(ScrnInfoPtr scrn, xf86CrtcConfigPtr config,
 
     for (o = -1; nextEnabledOutput(config, enabled, &o); ) {
         DisplayModePtr mode =
-            xf86OutputHasPreferredMode(config->output[o], width, height);
+            findReasonableMode(config, config->output[o], enabled, width, height);
 
         if (!mode)
             return FALSE;
@@ -2195,7 +2220,7 @@ xf86TargetRightOf(ScrnInfoPtr scrn, xf86CrtcConfigPtr config,
 
     for (o = -1; nextEnabledOutput(config, enabled, &o); ) {
         DisplayModePtr mode =
-            xf86OutputHasPreferredMode(config->output[o], width, height);
+            findReasonableMode(config, config->output[o], enabled, width, height);
 
         if (configured_outputs & (1 << o))
             continue;
@@ -2231,9 +2256,9 @@ xf86TargetRightOf(ScrnInfoPtr scrn, xf86CrtcConfigPtr config,
                 for (vt = 0; vt < tile_info->num_v_tile; vt++) {
 
                     for (ot = -1; nextEnabledOutput(config, enabled, &ot); ) {
-
                         DisplayModePtr mode =
-                            xf86OutputHasPreferredMode(config->output[ot], width, height);
+                            findReasonableMode(config, config->output[ot], enabled, width, height);
+
                         if (!config->output[ot]->tile_info.group_id)
                             continue;
 
