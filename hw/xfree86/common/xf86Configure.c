@@ -92,6 +92,7 @@ xf86AddBusDeviceToConfigure(const char *driver, BusType bus, void *busData,
         switch (bus) {
 #ifdef XSERVER_LIBPCIACCESS
         case BUS_PCI:
+	    DevToConfig[i].pVideo = busData;
             ret = xf86PciConfigure(busData, DevToConfig[i].pVideo);
             break;
 #endif
