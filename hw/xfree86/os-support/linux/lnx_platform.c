@@ -29,6 +29,9 @@ get_drm_info(struct OdevAttributes *attribs, char *path, int delayed_index)
     int fd;
     int err = 0;
     Bool paused, server_fd = FALSE;
+    const char pci_prefix[] = "/sys/devices/pci";
+
+    LogMessage(X_INFO, "Platform probe for %s\n", attribs->syspath);
 
     fd = systemd_logind_take_fd(attribs->major, attribs->minor, path, &paused);
     if (fd != -1) {
@@ -53,13 +56,6 @@ get_drm_info(struct OdevAttributes *attribs, char *path, int delayed_index)
     sv.drm_dd_major = -1;       /* Don't care */
     sv.drm_dd_minor = -1;       /* Don't care */
 
-    err = drmSetInterfaceVersion(fd, &sv);
-    if (err) {
-        xf86Msg(X_ERROR, "%s: failed to set DRM interface version 1.4: %s\n",
-                path, strerror(-err));
-        goto out;
-    }
-
     /* for a delayed probe we've already added the device */
     if (delayed_index == -1) {
             xf86_add_platform_device(attribs, FALSE);
@@ -69,9 +65,15 @@ get_drm_info(struct OdevAttributes *attribs, char *path, int delayed_index)
     if (server_fd)
         xf86_platform_devices[delayed_index].flags |= XF86_PDEV_SERVER_FD;
 
-    buf = drmGetBusid(fd);
-    xf86_platform_odev_attributes(delayed_index)->busid = XNFstrdup(buf);
-    drmFreeBusid(buf);
+    /* parse out a bus id */
+    if (!strncmp(attribs->syspath, pci_prefix, strlen(pci_prefix))) {
+        char *dbdf = attribs->syspath + strlen(pci_prefix) + strlen("XXXX:XX") + 1;
+        asprintf(&xf86_platform_odev_attributes(delayed_index)->busid,
+                 "pci:%.12s", dbdf);
+        LogMessage(X_INFO, "Platform PCI device at %s\n",
+                   xf86_platform_odev_attributes(delayed_index)->busid);
+    }
+
 
     v = drmGetVersion(fd);
     if (!v) {
