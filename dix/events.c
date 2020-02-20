@@ -3620,10 +3620,38 @@ ProcWarpPointer(ClientPtr client)
     return Success;
 }
 
+/*
+ * this is better but still wrong.  upstream discussion:
+ * http://lists.freedesktop.org/archives/xorg-devel/2014-July/043374.html
+ *
+ * in the meantime all we're doing is amending the redirected window path
+ * to check whether borderClip (total window area) overlaps the root window
+ * space at all.
+ *
+ * note that the redirect path doesn't need to account for panoramix'
+ * rewrite of root window geometry, because root windows can't be
+ * redirected.
+ */
+static Bool
+WindowIsConfineToAble(WindowPtr pWin)
+{
+    if (pWin->redirectDraw == RedirectDrawNone) {
+        if (RegionNotEmpty(&pWin->borderSize))
+            return TRUE;
+    } else {
+        WindowPtr root = pWin->drawable.pScreen->root;
+        if (rgnOUT != RegionContainsRect(&pWin->borderClip,
+                                         RegionExtents(&root->winSize)))
+            return TRUE;
+    }
+
+    return FALSE;
+}
+
 static Bool
 BorderSizeNotEmpty(DeviceIntPtr pDev, WindowPtr pWin)
 {
-    if (RegionNotEmpty(&pWin->borderSize))
+    if (WindowIsConfineToAble(pWin))
         return TRUE;
 
 #ifdef PANORAMIX
@@ -3631,8 +3659,7 @@ BorderSizeNotEmpty(DeviceIntPtr pDev, WindowPtr pWin)
         int i;
 
         FOR_NSCREENS_FORWARD_SKIP(i) {
-            if (RegionNotEmpty
-                (&pDev->spriteInfo->sprite->windows[i]->borderSize))
+            if (WindowIsConfineToAble(pDev->spriteInfo->sprite->windows[i]))
                 return TRUE;
         }
     }
