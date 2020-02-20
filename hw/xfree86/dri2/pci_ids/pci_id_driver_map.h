@@ -51,6 +51,12 @@ static const int radeonsi_chip_ids[] = {
 #undef CHIPSET
 };
 
+static const int ls7a1000_chip_ids[] = {
+#define CHIPSET(chip, family, name) chip,
+#include "pci_ids/ls7a1000_pci_ids.h"
+#undef CHIPSET
+};
+
 static const int virtio_gpu_chip_ids[] = {
 #define CHIPSET(chip, name, family) chip,
 #include "pci_ids/virtio_gpu_pci_ids.h"
@@ -79,6 +85,8 @@ static const struct {
    { 0x1002, "r600", r600_chip_ids, ARRAY_SIZE(r600_chip_ids) },
    { 0x1002, "radeonsi", radeonsi_chip_ids, ARRAY_SIZE(radeonsi_chip_ids) },
    { 0x10de, "nouveau", NULL, -1 },
+   { 0x0014, "loongson-drm", ls7a1000_chip_ids, ARRAY_SIZE(ls7a1000_chip_ids) },
+   { 0x0014, "etnaviv", ls7a1000_chip_ids, ARRAY_SIZE(ls7a1000_chip_ids) },
    { 0x1af4, "virtio_gpu", virtio_gpu_chip_ids, ARRAY_SIZE(virtio_gpu_chip_ids) },
    { 0x15ad, "vmwgfx", vmwgfx_chip_ids, ARRAY_SIZE(vmwgfx_chip_ids) },
    { 0x0000, NULL, NULL, 0 },

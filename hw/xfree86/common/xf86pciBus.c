@@ -1171,6 +1171,11 @@ xf86VideoPtrToDriverList(struct pci_device *dev, XF86MatchedDrivers *md)
         driverList[0] = "nouveau";
         break;
     }
+    /* Add support for loongson 7a1000 */
+    case 0x0014:
+        driverList[0] = "loongson-drm";
+        driverList[1] = "etnaviv";
+        break;
     case 0x1106:
         driverList[0] = "openchrome";
         break;
