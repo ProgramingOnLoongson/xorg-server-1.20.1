@@ -1073,52 +1073,8 @@ xf86VideoPtrToDriverList(struct pci_device *dev, XF86MatchedDrivers *md)
     const char *driverList[5] = { NULL, NULL, NULL, NULL, NULL };
 
     switch (dev->vendor_id) {
-        /* AMD Geode LX */
-    case 0x1022:
-        if (dev->device_id == 0x2081)
-            driverList[0] = "geode";
-        break;
-        /* older Geode products acquired by AMD still carry an NSC vendor_id */
-    case 0x100b:
-        if (dev->device_id == 0x0030) {
-            /* NSC Geode GX2 specifically */
-            driverList[0] = "geode";
-            /* GX2 support started its life in the NSC tree and was later
-               forked by AMD for GEODE so we keep it as a backup */
-            driverList[1] = "nsc";
-        }
-        else
-            /* other NSC variant e.g. 0x0104 (SC1400), 0x0504 (SCx200) */
-            driverList[0] = "nsc";
-        break;
-        /* Cyrix Geode GX1 */
-    case 0x1078:
-        if (dev->device_id == 0x0104)
-            driverList[0] = "cyrix";
-        break;
-    case 0x1142:
-        driverList[0] = "apm";
-        break;
-    case 0xedd8:
-        driverList[0] = "ark";
-        break;
-    case 0x1a03:
-        driverList[0] = "ast";
-        break;
     case 0x1002:
         driverList[0] = "ati";
-        break;
-    case 0x102c:
-        driverList[0] = "chips";
-        break;
-    case 0x1013:
-        driverList[0] = "cirrus";
-        break;
-    case 0x3d3d:
-        driverList[0] = "glint";
-        break;
-    case 0x105d:
-        driverList[0] = "i128";
         break;
     case 0x8086:
 	switch (dev->device_id)
@@ -1126,15 +1082,9 @@ xf86VideoPtrToDriverList(struct pci_device *dev, XF86MatchedDrivers *md)
 		/* Intel i740 */
 		case 0x00d1:
 		case 0x7800:
-			driverList[0] = "i740";
-			break;
 		/* GMA500/Poulsbo */
 		case 0x8108:
 		case 0x8109:
-			/* Try psb driver on Poulsbo - if available */
-			driverList[0] = "psb";
-			driverList[1] = "psb_drv";
-			break;
 		/* GMA600/Oaktrail */
 		case 0x4100:
 		case 0x4101:
@@ -1179,90 +1129,21 @@ xf86VideoPtrToDriverList(struct pci_device *dev, XF86MatchedDrivers *md)
 			break;
         }
         break;
-    case 0x102b:
-        driverList[0] = "mga";
-        break;
-    case 0x10c8:
-        driverList[0] = "neomagic";
-        break;
     case 0x10de:
     case 0x12d2:
-    {
-        int idx = 0;
-
-#ifdef __linux__
-        driverList[idx++] = "nouveau";
-#endif
-        driverList[idx++] = "nv";
+        driverList[0] = "nouveau";
         break;
-    }
     case 0x1106:
         driverList[0] = "openchrome";
         break;
     case 0x1b36:
         driverList[0] = "qxl";
         break;
-    case 0x1163:
-        driverList[0] = "rendition";
-        break;
-    case 0x5333:
-        switch (dev->device_id) {
-        case 0x88d0:
-        case 0x88d1:
-        case 0x88f0:
-        case 0x8811:
-        case 0x8812:
-        case 0x8814:
-        case 0x8901:
-            driverList[0] = "s3";
-            break;
-        case 0x5631:
-        case 0x883d:
-        case 0x8a01:
-        case 0x8a10:
-        case 0x8c01:
-        case 0x8c03:
-        case 0x8904:
-        case 0x8a13:
-            driverList[0] = "s3virge";
-            break;
-        default:
-            driverList[0] = "savage";
-            break;
-        }
-        break;
-    case 0x1039:
-        driverList[0] = "sis";
-        break;
-    case 0x126f:
-        driverList[0] = "siliconmotion";
-        break;
-    case 0x121a:
-        if (dev->device_id < 0x0003)
-            driverList[0] = "voodoo";
-        else
-            driverList[0] = "tdfx";
-        break;
-    case 0x1011:
-        driverList[0] = "tga";
-        break;
-    case 0x1023:
-        driverList[0] = "trident";
-        break;
-    case 0x100c:
-        driverList[0] = "tseng";
-        break;
     case 0x80ee:
         driverList[0] = "vboxvideo";
         break;
     case 0x15ad:
         driverList[0] = "vmware";
-        break;
-    case 0x18ca:
-        if (dev->device_id == 0x47)
-            driverList[0] = "xgixp";
-        else
-            driverList[0] = "xgi";
         break;
     default:
         break;
