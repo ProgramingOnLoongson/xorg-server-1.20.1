@@ -151,7 +151,7 @@ miMarkOverlappedWindows(WindowPtr pWin, WindowPtr pFirst, WindowPtr *ppLayerWin)
          */
         pChild = pWin;
         while (1) {
-            if (pChild->viewable) {
+            if (pChild->paintable) {
                 if (RegionBroken(&pChild->winSize))
                     SetWinSize(pChild);
                 if (RegionBroken(&pChild->borderSize))
@@ -175,7 +175,7 @@ miMarkOverlappedWindows(WindowPtr pWin, WindowPtr pFirst, WindowPtr *ppLayerWin)
         box = RegionExtents(&pWin->borderSize);
         pLast = pChild->parent->lastChild;
         while (1) {
-            if (pChild->viewable) {
+            if (pChild->paintable) {
                 if (RegionBroken(&pChild->winSize))
                     SetWinSize(pChild);
                 if (RegionBroken(&pChild->borderSize))
@@ -244,7 +244,7 @@ void
 miMoveWindow(WindowPtr pWin, int x, int y, WindowPtr pNextSib, VTKind kind)
 {
     WindowPtr pParent;
-    Bool WasViewable = (Bool) (pWin->viewable);
+    Bool WasPaintable = pWin->paintable;
     short bw;
     RegionPtr oldRegion = NULL;
     DDXPointRec oldpt;
@@ -261,7 +261,7 @@ miMoveWindow(WindowPtr pWin, int x, int y, WindowPtr pNextSib, VTKind kind)
 
     oldpt.x = pWin->drawable.x;
     oldpt.y = pWin->drawable.y;
-    if (WasViewable) {
+    if (WasPaintable) {
         oldRegion = RegionCreate(NullBox, 1);
         RegionCopy(oldRegion, &pWin->borderClip);
         anyMarked = (*pScreen->MarkOverlappedWindows) (pWin, pWin, &pLayerWin);
@@ -280,7 +280,7 @@ miMoveWindow(WindowPtr pWin, int x, int y, WindowPtr pNextSib, VTKind kind)
 
     ResizeChildrenWinSize(pWin, x - oldpt.x, y - oldpt.y, 0, 0);
 
-    if (WasViewable) {
+    if (WasPaintable) {
         if (pLayerWin == pWin)
             anyMarked |= (*pScreen->MarkOverlappedWindows)
                 (pWin, windowToValidate, NULL);
@@ -343,7 +343,7 @@ miResizeWindow(WindowPtr pWin, int x, int y, unsigned int w, unsigned int h,
                WindowPtr pSib)
 {
     WindowPtr pParent;
-    Bool WasViewable = (Bool) (pWin->viewable);
+    Bool WasPaintable = pWin->paintable;
     unsigned short width = pWin->drawable.width, height = pWin->drawable.height;
     short oldx = pWin->drawable.x, oldy = pWin->drawable.y;
     int bw = wBorderWidth(pWin);
@@ -373,7 +373,7 @@ miResizeWindow(WindowPtr pWin, int x, int y, unsigned int w, unsigned int h,
     pScreen = pWin->drawable.pScreen;
     newx = pParent->drawable.x + x + bw;
     newy = pParent->drawable.y + y + bw;
-    if (WasViewable) {
+    if (WasPaintable) {
         anyMarked = FALSE;
         /*
          * save the visible region of the window
@@ -448,7 +448,7 @@ miResizeWindow(WindowPtr pWin, int x, int y, unsigned int w, unsigned int h,
 
     pFirstChange = MoveWindowInStack(pWin, pSib);
 
-    if (WasViewable) {
+    if (WasPaintable) {
         pRegion = RegionCreate(NullBox, 1);
 
         if (pLayerWin == pWin)
@@ -474,7 +474,7 @@ miResizeWindow(WindowPtr pWin, int x, int y, unsigned int w, unsigned int h,
 
     GravityTranslate(x, y, oldx, oldy, dw, dh, pWin->bitGravity, &nx, &ny);
 
-    if (WasViewable) {
+    if (WasPaintable) {
         /* avoid the border */
         if (HasBorder(pWin)) {
             int offx, offy, dx, dy;
@@ -636,13 +636,13 @@ miGetLayerWindow(WindowPtr pWin)
 void
 miSetShape(WindowPtr pWin, int kind)
 {
-    Bool WasViewable = (Bool) (pWin->viewable);
+    Bool WasPaintable = pWin->paintable;
     ScreenPtr pScreen = pWin->drawable.pScreen;
     Bool anyMarked = FALSE;
     WindowPtr pLayerWin;
 
     if (kind != ShapeInput) {
-        if (WasViewable) {
+        if (WasPaintable) {
             anyMarked = (*pScreen->MarkOverlappedWindows) (pWin, pWin,
                                                            &pLayerWin);
             if (pWin->valdata) {
@@ -663,7 +663,7 @@ miSetShape(WindowPtr pWin, int kind)
 
         ResizeChildrenWinSize(pWin, 0, 0, 0, 0);
 
-        if (WasViewable) {
+        if (WasPaintable) {
             anyMarked |= (*pScreen->MarkOverlappedWindows) (pWin, pWin, NULL);
 
             if (anyMarked) {
@@ -689,7 +689,7 @@ miChangeBorderWidth(WindowPtr pWin, unsigned int width)
     int oldwidth;
     Bool anyMarked = FALSE;
     ScreenPtr pScreen;
-    Bool WasViewable = (Bool) (pWin->viewable);
+    Bool WasPaintable = pWin->paintable;
     Bool HadBorder;
     WindowPtr pLayerWin;
 
@@ -698,13 +698,13 @@ miChangeBorderWidth(WindowPtr pWin, unsigned int width)
         return;
     HadBorder = HasBorder(pWin);
     pScreen = pWin->drawable.pScreen;
-    if (WasViewable && width < oldwidth)
+    if (WasPaintable && width < oldwidth)
         anyMarked = (*pScreen->MarkOverlappedWindows) (pWin, pWin, &pLayerWin);
 
     pWin->borderWidth = width;
     SetBorderSize(pWin);
 
-    if (WasViewable) {
+    if (WasPaintable) {
         if (width > oldwidth) {
             anyMarked = (*pScreen->MarkOverlappedWindows) (pWin, pWin,
                                                            &pLayerWin);

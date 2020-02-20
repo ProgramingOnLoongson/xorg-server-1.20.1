@@ -111,7 +111,7 @@ compMarkWindows(WindowPtr pWin, WindowPtr *ppLayerWin)
     ScreenPtr pScreen = pWin->drawable.pScreen;
     WindowPtr pLayerWin = pWin;
 
-    if (!pWin->viewable)
+    if (!pWin->viewable && pWin->backingStore != Always)
         return FALSE;
 
     (*pScreen->MarkOverlappedWindows) (pWin, pWin, &pLayerWin);

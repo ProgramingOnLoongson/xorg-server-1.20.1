@@ -131,6 +131,7 @@ typedef struct _CompScreen {
     DestroyWindowProcPtr DestroyWindow;
     RealizeWindowProcPtr RealizeWindow;
     UnrealizeWindowProcPtr UnrealizeWindow;
+    WindowExposuresProcPtr WindowExposures;
     ClipNotifyProcPtr ClipNotify;
     /*
      * Called from ConfigureWindow, these
@@ -140,6 +141,7 @@ typedef struct _CompScreen {
     ConfigNotifyProcPtr ConfigNotify;
     MoveWindowProcPtr MoveWindow;
     ResizeWindowProcPtr ResizeWindow;
+    MarkUnrealizedWindowProcPtr MarkUnrealizedWindow;
     ChangeBorderWidthProcPtr ChangeBorderWidth;
     /*
      * Reparenting has an effect on Subwindows redirect
@@ -291,6 +293,9 @@ Bool
  compUnrealizeWindow(WindowPtr pWin);
 
 void
+compWindowExposures(WindowPtr pWin, RegionPtr reg);
+
+void
  compClipNotify(WindowPtr pWin, int dx, int dy);
 
 void
@@ -300,6 +305,9 @@ void
 
 compResizeWindow(WindowPtr pWin, int x, int y,
                  unsigned int w, unsigned int h, WindowPtr pSib);
+
+void
+ compMarkUnrealizedWindow(WindowPtr pChild, WindowPtr pWin, Bool fromConfigure);
 
 void
  compChangeBorderWidth(WindowPtr pWin, unsigned int border_width);

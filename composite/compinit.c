@@ -67,6 +67,7 @@ compCloseScreen(ScreenPtr pScreen)
     pScreen->ConfigNotify = cs->ConfigNotify;
     pScreen->MoveWindow = cs->MoveWindow;
     pScreen->ResizeWindow = cs->ResizeWindow;
+    pScreen->MarkUnrealizedWindow = cs->MarkUnrealizedWindow;
     pScreen->ChangeBorderWidth = cs->ChangeBorderWidth;
 
     pScreen->ClipNotify = cs->ClipNotify;
@@ -74,6 +75,7 @@ compCloseScreen(ScreenPtr pScreen)
     pScreen->RealizeWindow = cs->RealizeWindow;
     pScreen->DestroyWindow = cs->DestroyWindow;
     pScreen->CreateWindow = cs->CreateWindow;
+    pScreen->WindowExposures = cs->WindowExposures;
     pScreen->CopyWindow = cs->CopyWindow;
     pScreen->PositionWindow = cs->PositionWindow;
 
@@ -106,17 +108,32 @@ compInstallColormap(ColormapPtr pColormap)
 }
 
 static void
+compCheckPaintable(WindowPtr pWin)
+{
+    pWin->paintable = pWin->viewable || pWin->backingStore == Always;
+}
+
+static void
 compCheckBackingStore(WindowPtr pWin)
 {
-    if (pWin->backingStore != NotUseful && !pWin->backStorage) {
-        compRedirectWindow(serverClient, pWin, CompositeRedirectAutomatic);
-        pWin->backStorage = TRUE;
+    Bool should =
+        (pWin->backingStore == Always) ||
+        (pWin->backingStore == WhenMapped && pWin->viewable);
+
+    if (should && !pWin->backStorage) {
+        compCheckPaintable(pWin);
+        if (Success == compRedirectWindow(serverClient, pWin,
+                                          CompositeRedirectAutomatic))
+            pWin->backStorage = TRUE;
     }
-    else if (pWin->backingStore == NotUseful && pWin->backStorage) {
-        compUnredirectWindow(serverClient, pWin,
-                             CompositeRedirectAutomatic);
-        pWin->backStorage = FALSE;
+    else if (!should && pWin->backStorage) {
+        compCheckPaintable(pWin);
+        if (Success == compUnredirectWindow(serverClient, pWin,
+                                            CompositeRedirectAutomatic))
+            pWin->backStorage = FALSE;
     }
+    pWin->paintable = pWin->viewable ||
+        (pWin->backingStore == Always && pWin->backStorage);
 }
 
 /* Fake backing store via automatic redirection */
@@ -418,6 +435,9 @@ compScreenInit(ScreenPtr pScreen)
     cs->UnrealizeWindow = pScreen->UnrealizeWindow;
     pScreen->UnrealizeWindow = compUnrealizeWindow;
 
+    cs->WindowExposures = pScreen->WindowExposures;
+    pScreen->WindowExposures = compWindowExposures;
+
     cs->ClipNotify = pScreen->ClipNotify;
     pScreen->ClipNotify = compClipNotify;
 
@@ -429,6 +449,9 @@ compScreenInit(ScreenPtr pScreen)
 
     cs->ResizeWindow = pScreen->ResizeWindow;
     pScreen->ResizeWindow = compResizeWindow;
+
+    cs->MarkUnrealizedWindow = pScreen->MarkUnrealizedWindow;
+    pScreen->MarkUnrealizedWindow = compMarkUnrealizedWindow;
 
     cs->ChangeBorderWidth = pScreen->ChangeBorderWidth;
     pScreen->ChangeBorderWidth = compChangeBorderWidth;

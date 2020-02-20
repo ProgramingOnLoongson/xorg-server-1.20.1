@@ -152,8 +152,10 @@ compCheckRedirect(WindowPtr pWin)
     CompScreenPtr cs = GetCompScreen(pWin->drawable.pScreen);
     Bool should;
 
-    should = pWin->realized && (pWin->drawable.class != InputOnly) &&
-        (cw != NULL) && (pWin->parent != NULL);
+    should = (pWin->realized || pWin->backingStore == Always) &&
+        (pWin->drawable.class != InputOnly) &&
+        (cw != NULL) &&
+        (pWin->parent != NULL);
 
     /* Never redirect the overlay window */
     if (cs->pOverlayWin != NULL) {
@@ -288,6 +290,32 @@ compUnrealizeWindow(WindowPtr pWin)
     pScreen->UnrealizeWindow = compUnrealizeWindow;
     compCheckTree(pWin->drawable.pScreen);
     return ret;
+}
+
+void
+compWindowExposures(WindowPtr pWin, RegionPtr reg)
+{
+    ScreenPtr pScreen = pWin->drawable.pScreen;
+    CompScreenPtr cs = GetCompScreen(pScreen);
+
+    pScreen->WindowExposures = cs->WindowExposures;
+
+    if (pWin->backStorage) {
+        DamageDamageRegion(&pWin->drawable, reg);
+
+        /* should be RegionEmpty but buggy apps expect an expose */
+        {
+            BoxRec box = *RegionExtents(reg);
+            box.x2 = box.x1 + 1;
+            box.y2 = box.x1 + 1;
+            RegionReset(reg, &box);
+        }
+    }
+
+    pScreen->WindowExposures(pWin, reg);
+
+    cs->WindowExposures = pScreen->WindowExposures;
+    pScreen->WindowExposures = compWindowExposures;
 }
 
 /*
@@ -425,6 +453,36 @@ compChangeBorderWidth(WindowPtr pWin, unsigned int bw)
 
     compFreeOldPixmap(pWin);
     compCheckTree(pWin->drawable.pScreen);
+}
+
+/*
+ * pWin is the top-level window being unmapped, pChild is one of its
+ * (previously viewable) descendents.  MUW under us will try to empty
+ * the child clip.
+ */
+void
+compMarkUnrealizedWindow(WindowPtr pChild, WindowPtr pWin, Bool fromConfigure)
+{
+    Bool should = FALSE;
+
+    if (pWin == pChild && pWin->backingStore == Always && pWin->backStorage) {
+        /* this is the top-level being unmapped, restore paintable */
+        pWin->paintable = (pWin->drawable.class == InputOutput);
+    } else if (pChild->parent->paintable && pChild->mapped) {
+        pChild->paintable = (pWin->drawable.class == InputOutput);
+    } else {
+        should = TRUE;
+    }
+
+    if (should) {
+        ScreenPtr pScreen = pWin->drawable.pScreen;
+        CompScreenPtr cs = GetCompScreen(pScreen);
+
+        pScreen->MarkUnrealizedWindow = cs->MarkUnrealizedWindow;
+        (*pScreen->MarkUnrealizedWindow) (pChild, pWin, fromConfigure);
+        cs->MarkUnrealizedWindow = pScreen->MarkUnrealizedWindow;
+        pScreen->MarkUnrealizedWindow = compMarkUnrealizedWindow;
+    }
 }
 
 void
@@ -597,6 +655,14 @@ compDestroyWindow(WindowPtr pWin)
     CompWindowPtr cw;
     CompSubwindowsPtr csw;
     Bool ret;
+
+    /*
+     * Take down bs explicitly, to get ->backStorage cleared
+     */
+    if (pWin->backingStore != NotUseful) {
+        pWin->backingStore = NotUseful;
+        pScreen->ChangeWindowAttributes(pWin, CWBackingStore);
+    }
 
     pScreen->DestroyWindow = cs->DestroyWindow;
     while ((cw = GetCompWindow(pWin)))

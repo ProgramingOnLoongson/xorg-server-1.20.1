@@ -152,12 +152,9 @@ miDoCopy(DrawablePtr pSrcDrawable,
     Bool fastDst = FALSE;       /* for fast clipping with one rect dest */
     Bool fastExpose = FALSE;    /* for fast exposures with pixmap source */
 
-    /* Short cut for unmapped windows */
-
-    if (pDstDrawable->type == DRAWABLE_WINDOW &&
-        !((WindowPtr) pDstDrawable)->realized) {
+    /* Bail early if we'd do no work */
+    if (RegionNil(pGC->pCompositeClip))
         return NULL;
-    }
 
     if (pSrcDrawable->pScreen->SourceValidate) {
         (*pSrcDrawable->pScreen->SourceValidate) (pSrcDrawable, xIn, yIn,

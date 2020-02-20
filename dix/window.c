@@ -492,6 +492,7 @@ SetWindowToDefaults(WindowPtr pWin)
     pWin->mapped = FALSE;       /* off */
     pWin->realized = FALSE;     /* off */
     pWin->viewable = FALSE;
+    pWin->paintable = FALSE;
     pWin->visibility = VisibilityNotViewable;
     pWin->overrideRedirect = FALSE;
     pWin->saveUnder = FALSE;
@@ -1056,6 +1057,7 @@ CrushTree(WindowPtr pWin)
             FreeResource(pChild->drawable.id, RT_WINDOW);
             pSib = pChild->nextSib;
             pChild->viewable = FALSE;
+            pChild->paintable = FALSE;
             if (pChild->realized) {
                 pChild->realized = FALSE;
                 (*UnrealizeWindow) (pChild);
@@ -1587,7 +1589,7 @@ ChangeWindowAttributes(WindowPtr pWin, Mask vmask, XID *vlist, ClientPtr client)
        for the tile to be rotated, and the correct function selected.
      */
     if (((vmaskCopy & (CWBorderPixel | CWBorderPixmap)) || borderRelative)
-        && pWin->viewable && HasBorder(pWin)) {
+        && pWin->paintable && HasBorder(pWin)) {
         RegionRec exposed;
 
         RegionNull(&exposed);
@@ -2161,7 +2163,7 @@ ReflectStackChange(WindowPtr pWin, WindowPtr pSib, VTKind kind)
 {
 /* Note that pSib might be NULL */
 
-    Bool WasViewable = (Bool) pWin->viewable;
+    Bool WasPaintable = (Bool) pWin->paintable;
     Bool anyMarked;
     WindowPtr pFirstChange;
     WindowPtr pLayerWin;
@@ -2173,7 +2175,7 @@ ReflectStackChange(WindowPtr pWin, WindowPtr pSib, VTKind kind)
 
     pFirstChange = MoveWindowInStack(pWin, pSib);
 
-    if (WasViewable) {
+    if (WasPaintable) {
         anyMarked = (*pScreen->MarkOverlappedWindows) (pWin, pFirstChange,
                                                        &pLayerWin);
         if (pLayerWin != pWin)
@@ -2612,8 +2614,9 @@ RealizeTree(WindowPtr pWin)
     pChild = pWin;
     while (1) {
         if (pChild->mapped) {
-            pChild->realized = TRUE;
+            pChild->realized = pChild->parent->realized;
             pChild->viewable = (pChild->drawable.class == InputOutput);
+            pChild->paintable = (pChild->drawable.class == InputOutput);
             (*Realize) (pChild);
             if (pChild->firstChild) {
                 pChild = pChild->firstChild;
@@ -2689,7 +2692,7 @@ MapWindow(WindowPtr pWin, ClientPtr client)
         if (SubStrSend(pWin, pParent))
             DeliverMapNotify(pWin);
 
-        if (!pParent->realized)
+        if (!pParent->realized && !pParent->paintable)
             return Success;
         RealizeTree(pWin);
         if (pWin->viewable) {
@@ -2711,6 +2714,7 @@ MapWindow(WindowPtr pWin, ClientPtr client)
         pWin->mapped = TRUE;
         pWin->realized = TRUE;  /* for roots */
         pWin->viewable = pWin->drawable.class == InputOutput;
+        pWin->paintable = pWin->drawable.class == InputOutput;
         /* We SHOULD check for an error value here XXX */
         (*pScreen->RealizeWindow) (pWin);
         if (pScreen->ClipNotify)
@@ -2759,7 +2763,7 @@ MapSubwindows(WindowPtr pParent, ClientPtr client)
 
             if (!pFirstMapped)
                 pFirstMapped = pWin;
-            if (pParent->realized) {
+            if (pParent->realized || pParent->paintable) {
                 RealizeTree(pWin);
                 if (pWin->viewable) {
                     anyMarked |= (*pScreen->MarkOverlappedWindows) (pWin, pWin,
@@ -2817,6 +2821,7 @@ UnrealizeTree(WindowPtr pWin, Bool fromConfigure)
             DeleteWindowFromAnyEvents(pChild, FALSE);
             if (pChild->viewable) {
                 pChild->viewable = FALSE;
+                pChild->paintable = FALSE;
                 (*MarkUnrealizedWindow) (pChild, pWin, fromConfigure);
                 pChild->drawable.serialNumber = NEXT_SERIAL_NUMBER;
             }
@@ -2856,7 +2861,7 @@ UnmapWindow(WindowPtr pWin, Bool fromConfigure)
 {
     WindowPtr pParent;
     Bool wasRealized = (Bool) pWin->realized;
-    Bool wasViewable = (Bool) pWin->viewable;
+    Bool wasPaintable = pWin->paintable;
     ScreenPtr pScreen = pWin->drawable.pScreen;
     WindowPtr pLayerWin = pWin;
 
@@ -2864,21 +2869,19 @@ UnmapWindow(WindowPtr pWin, Bool fromConfigure)
         return Success;
     if (SubStrSend(pWin, pParent))
         DeliverUnmapNotify(pWin, fromConfigure);
-    if (wasViewable && !fromConfigure) {
-        pWin->valdata = UnmapValData;
+    if (wasPaintable && !fromConfigure) {
+        (*pScreen->MarkWindow) (pWin);
         (*pScreen->MarkOverlappedWindows) (pWin, pWin->nextSib, &pLayerWin);
         (*pScreen->MarkWindow) (pLayerWin->parent);
     }
     pWin->mapped = FALSE;
     if (wasRealized)
         UnrealizeTree(pWin, fromConfigure);
-    if (wasViewable) {
-        if (!fromConfigure) {
-            (*pScreen->ValidateTree) (pLayerWin->parent, pWin, VTUnmap);
-            (*pScreen->HandleExposures) (pLayerWin->parent);
-            if (pScreen->PostValidateTree)
-                (*pScreen->PostValidateTree) (pLayerWin->parent, pWin, VTUnmap);
-        }
+    if (wasPaintable && !fromConfigure) {
+        (*pScreen->ValidateTree) (pLayerWin->parent, pWin, VTUnmap);
+        (*pScreen->HandleExposures) (pLayerWin->parent);
+        if (pScreen->PostValidateTree)
+            (*pScreen->PostValidateTree) (pLayerWin->parent, pWin, VTUnmap);
     }
     if (wasRealized && !fromConfigure) {
         WindowsRestructured();
@@ -2898,7 +2901,7 @@ UnmapSubwindows(WindowPtr pWin)
 {
     WindowPtr pChild, pHead;
     Bool wasRealized = (Bool) pWin->realized;
-    Bool wasViewable = (Bool) pWin->viewable;
+    Bool wasPaintable = pWin->paintable;
     Bool anyMarked = FALSE;
     Mask parentNotify;
     WindowPtr pLayerWin = NULL;
@@ -2909,7 +2912,7 @@ UnmapSubwindows(WindowPtr pWin)
     parentNotify = SubSend(pWin);
     pHead = RealChildHead(pWin);
 
-    if (wasViewable)
+    if (wasPaintable)
         pLayerWin = (*pScreen->GetLayerWindow) (pWin);
 
     for (pChild = pWin->lastChild; pChild != pHead; pChild = pChild->prevSib) {
@@ -2917,7 +2920,7 @@ UnmapSubwindows(WindowPtr pWin)
             if (parentNotify || StrSend(pChild))
                 DeliverUnmapNotify(pChild, xFalse);
             if (pChild->viewable) {
-                pChild->valdata = UnmapValData;
+                (*pScreen->MarkWindow) (pChild);
                 anyMarked = TRUE;
             }
             pChild->mapped = FALSE;
@@ -2925,31 +2928,28 @@ UnmapSubwindows(WindowPtr pWin)
                 UnrealizeTree(pChild, FALSE);
         }
     }
-    if (wasViewable) {
-        if (anyMarked) {
-            if (pLayerWin->parent == pWin)
-                (*pScreen->MarkWindow) (pWin);
-            else {
-                WindowPtr ptmp;
+    if (wasPaintable && anyMarked) {
+        if (pLayerWin->parent == pWin)
+            (*pScreen->MarkWindow) (pWin);
+        else {
+            WindowPtr ptmp;
 
-                (*pScreen->MarkOverlappedWindows) (pWin, pLayerWin, NULL);
-                (*pScreen->MarkWindow) (pLayerWin->parent);
+            (*pScreen->MarkOverlappedWindows) (pWin, pLayerWin, NULL);
+            (*pScreen->MarkWindow) (pLayerWin->parent);
 
-                /* Windows between pWin and pLayerWin may not have been marked */
-                ptmp = pWin;
+            /* Windows between pWin and pLayerWin may not have been marked */
+            ptmp = pWin;
 
-                while (ptmp != pLayerWin->parent) {
-                    (*pScreen->MarkWindow) (ptmp);
-                    ptmp = ptmp->parent;
-                }
-                pHead = pWin->firstChild;
+            while (ptmp != pLayerWin->parent) {
+                (*pScreen->MarkWindow) (ptmp);
+                ptmp = ptmp->parent;
             }
-            (*pScreen->ValidateTree) (pLayerWin->parent, pHead, VTUnmap);
-            (*pScreen->HandleExposures) (pLayerWin->parent);
-            if (pScreen->PostValidateTree)
-                (*pScreen->PostValidateTree) (pLayerWin->parent, pHead,
-                                              VTUnmap);
+            pHead = pWin->firstChild;
         }
+        (*pScreen->ValidateTree) (pLayerWin->parent, pHead, VTUnmap);
+        (*pScreen->HandleExposures) (pLayerWin->parent);
+        if (pScreen->PostValidateTree)
+            (*pScreen->PostValidateTree) (pLayerWin->parent, pHead, VTUnmap);
     }
     if (wasRealized) {
         WindowsRestructured();
