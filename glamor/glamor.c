@@ -491,11 +491,18 @@ glamor_init(ScreenPtr screen, unsigned int flags)
     glamor_make_current(glamor_priv);
 
     if (epoxy_is_desktop_gl())
+    {
         glamor_priv->gl_flavor = GLAMOR_GL_DESKTOP;
+        LogMessage(X_WARNING, "glamor:  GLAMOR_GL_DESKTOP .\n");
+    }
     else
+    {
         glamor_priv->gl_flavor = GLAMOR_GL_ES2;
-
+        LogMessage(X_WARNING, "glamor:  GLAMOR_GL_ES2 .\n");
+    }
     gl_version = epoxy_gl_version();
+    
+    LogMessage(X_WARNING, "glamor: gl_version = %d\n", gl_version);
 
     /* assume a core profile if we are GL 3.1 and don't have ARB_compatibility */
     glamor_priv->is_core_profile =
