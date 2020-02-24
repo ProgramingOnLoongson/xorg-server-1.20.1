@@ -240,7 +240,7 @@ static REF_TRANSFORM trans[2] = {
 };
 
 void
-glamor_xv_render(glamor_port_private *port_priv)
+glamor_xv_render(glamor_port_private *port_priv, int id)
 {
     ScreenPtr screen = port_priv->pPixmap->drawable.pScreen;
     glamor_screen_private *glamor_priv = glamor_get_screen_private(screen);
@@ -511,7 +511,7 @@ glamor_xv_put_image(glamor_port_private *port_priv,
     port_priv->w = width;
     port_priv->h = height;
     port_priv->pDraw = pDrawable;
-    glamor_xv_render(port_priv);
+    glamor_xv_render(port_priv, id);
     return Success;
 }
 
