@@ -1071,6 +1071,10 @@ PreInit(ScrnInfoPtr pScrn, int flags)
     if (ret == 0 && value != 0)
         ms->kms_has_modifiers = TRUE;
 
+
+    xf86DrvMsg(pScrn->scrnIndex, X_INFO, ms->kms_has_modifiers ? 
+	"KMS has modifier support.\n" : "KMS does't have modifier support\n");
+
     if (drmmode_pre_init(pScrn, &ms->drmmode, pScrn->bitsPerPixel / 8) == FALSE) {
         xf86DrvMsg(pScrn->scrnIndex, X_ERROR, "KMS setup failed\n");
         goto fail;
