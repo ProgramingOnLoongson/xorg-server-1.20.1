@@ -310,8 +310,10 @@ fbdev_open(int scrnIndex, const char *dev, char **namep)
     struct fb_fix_screeninfo fix;
     int fd;
 
+    xf86DrvMsg(scrnIndex, X_INFO, "open %s\n", dev);
     /* try argument (from XF86Config) first */
     if (dev) {
+
         fd = open(dev, O_RDWR, 0);
     }
     else {

@@ -444,6 +444,8 @@ xf86PciAddMatchingDev(DriverPtr drvp)
     struct pci_device_iterator *iter;
     int numFound = 0;
 
+    xf86Msg(X_INFO, "xf86PciAddMatchingDev\n");
+
     iter = pci_id_match_iterator_create(NULL);
     while ((pPci = pci_device_next(iter)) != NULL) {
         /* Determine if this device is supported by the driver.  If it is,

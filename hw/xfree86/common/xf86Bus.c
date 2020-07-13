@@ -131,7 +131,7 @@ xf86BusConfig(void)
     /*
      * 2. If no Screens were found, call each drivers probe function with
      *    ignorePrimary = TRUE, to ensure that we do actually get a
-     *    Screen if there is atleast one supported video card.
+     *    Screen if there is at least one supported video card.
      */
     if (xf86NumScreens == 0) {
         xf86ProbeIgnorePrimary = TRUE;
